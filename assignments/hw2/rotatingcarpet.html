@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<title>Rotating 2D Sierpinski Carpet</title>
+    
+    <style>
+    body{
+        background-image:url("http://orig05.deviantart.net/0370/f/2010/194/9/2/variation_of_sierpinski_carpet_by_alcandoras.png");
+    }
+    canvas{
+        color:black;
+    }
+    </style>
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+uniform float theta;
+void
+main()
+{
+	float s = sin(theta);
+	float c = cos(theta);
+    gl_Position.x = -s*vPosition.y + c * vPosition.x;
+	gl_Position.y = s*vPosition.x + c * vPosition.y;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+void
+main()
+{
+    gl_FragColor = vec4( 0.55, 0.225, 0.6, 1.0 );
+}
+</script>
+<script>
+    var c = document.getElementById("gl-canvas");
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(0,0,512,512);
+    </script>
+
+<script type="text/javascript" src="Common/webgl-utils.js"></script>
+<script type="text/javascript" src="Common/initShaders.js"></script>
+<script type="text/javascript" src="Common/MV.js"></script>
+<script type="text/javascript" src="rotatingcarpet.js"></script>
+</head>   
+
+<body>
+
+	<center>
+	<canvas id="gl-canvas" width="512" height="512">
+		Oops ... your browser doesn't support the HTML5 canvas element
+	</canvas>
+	<br>
+	<br>
+	<p><input type="range" id="slider"  value="0"
+		min="0" max="7"></p>
+	<button id = "rotate">
+		Rotate
+	</button>
+	</center>
+</body>
+</html>
