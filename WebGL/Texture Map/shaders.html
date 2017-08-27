@@ -80,65 +80,54 @@ float s = sin(theta);
                                -vCenter.x, -vCenter.y, -vCenter.z, 1.0);
                                
                                
-    //vec4 newPosition =  translation * rz * invTranslation * vPosition;
-    //vec4 newPosition = invTranslation * rz * translation * vPosition;
-     
-    //gl_Position.x = newPosition.x;
-    //gl_Position.y = newPosition.y;
-     
-    //gl_Position.x = -s*vPosition.y + c * vPosition.x;
-	//gl_Position.y = s*vPosition.x + c * vPosition.y;
-    
-	
-	//gl_Position.z = 0.0;
-	//gl_Position.w = 1.0;
-	
-	vec4 newPosition = translation * rz * invTranslation * vPosition;
-	//vec4 newPosition2 = projectionMatrix*modelViewMatrix*newPosition;
-	vec4 newPosition2 = projectionMatrix*modelViewMatrix*newPosition;
-	//gl_Position.x = newPosition2.x;
-	//gl_Position.y = newPosition2.y;
-	//gl_Position.z = newPosition2.z;
-	//gl_Position.w = 1.0;
-	//gl_Position = projectionMatrix*modelViewMatrix*vPosition;
-	
-	gl_Position = newPosition2;
+    vec4 rotation = translation * rz * invTranslation * vPosition;
+	vec4 finalPosition = projectionMatrix*modelViewMatrix*rotation;
+
+	gl_Position = finalPosition;
     
     vec3 pos = -(modelViewMatrix * vPosition).xyz;
+
     
     //fixed light postion
     
     vec3 light = lightPosition.xyz;
+
+    //unit vector in direction of the light source
     vec3 L = normalize( light - pos );
     
-    vec3 E = normalize( -pos );
-    vec3 H = normalize( L + E );
+    //specular term (E in book)
+    vec3 specularTerm = normalize( -pos );
+
+    //halfway vector (H in book)
+    vec3 halfwayVector = normalize( L + specularTerm );
     
    
     
-    vec4 newNormal = vec4(vNormal,0);
-    vec4 NN = translation * rz * invTranslation * newNormal;
-    
-    vec3 N = normalize( (modelViewMatrix*NN).xyz);
+    vec4 normal = vec4(vNormal,0);
+    vec4 newNormal = translation * rz * invTranslation * normal;
+    vec3 normalizedNormal = normalize( (modelViewMatrix*newNormal).xyz);
+
+
     // Compute terms in the illumination equation
     vec4 ambient = ambientProduct;
-    float Kd = max( dot(L, N), 0.0 );
+
+    float Kd = max( dot(L, normalizedNormal), 0.0 );
     vec4  diffuse = Kd*diffuseProduct;
-    float Ks = pow( max(dot(N, H), 0.0), shininess );
-    vec4  specular = Ks * specularProduct;
+
+    float Ks = pow( max(dot(normalizedNormal, halfwayVector), 0.0), shininess );
+    vec4 specular = Ks * specularProduct;
     
-    if( dot(L, N) < 0.0 ) {
-	specular = vec4(0.0, 0.0, 0.0, 1.0);
+    //specular highlight
+    if( dot(L, normalizedNormal) < 0.0 ) {
+    specular = vec4(0.0, 0.0, 0.0, 1.0);
     } 
-    
-    //fColor = vColor;
+        
     
 	
     fColor = ambient + diffuse + specular;
     
     fColor.a = .01;
     fTexCoord = vTexCoord;
-
     
     
     
@@ -154,8 +143,6 @@ void
 main()
 {
     gl_FragColor = fColor*texture2D( texture, fTexCoord );
-
-   // gl_FragColor = fColor;
 }
 </script>
 
