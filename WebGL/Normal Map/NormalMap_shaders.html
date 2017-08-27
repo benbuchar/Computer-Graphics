@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<title>Rotating 3D Sierpinski Carpet</title>
+    
+    <style>
+    body{
+        /*background-image:url("http://orig05.deviantart.net/0370/f/2010/194/9/2/variation_of_sierpinski_carpet_by_alcandoras.png");*/
+        background-color:black;
+    }
+    #redbutton{
+        background-color:red;
+        color:white;
+        width:100px;
+        height:25px;
+    }
+    
+    #sliders{
+        color:white;
+        background-color:black;
+        width:500px;
+    }
+
+    #subdivisions{
+        color:white;
+        background-color:black;
+    }
+    
+    #colors{
+        color:white;
+        background-color:black;
+        width:500px;
+    }
+
+    #cameraControls{
+        color:white;
+        background-color:black;
+        width:500px;
+    }
+    
+    #breakButton{
+        color:white;
+        background-color:black;
+        width:500px;
+    }
+
+    #image{
+        visibility: hidden;
+    }
+
+    #canvas2{
+        visibility: hidden;
+    }
+
+    
+    </style>
+    
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+attribute vec3 vNormal, vBinormal, vTangent;
+attribute vec3 vCenter;
+attribute vec4 vColor;
+attribute vec4 ambientProduct, diffuseProduct, specularProduct;
+attribute vec2 vTexCoord;
+
+
+varying vec3 inputNormal, inputBinormal, inputTangent;
+varying vec4 fColor;
+varying vec2 fTexCoord;
+varying vec3 fL;
+varying vec3 fH;
+varying vec3 fN;
+varying vec4 fAmbientProduct, fDiffuseProduct, fSpecularProduct;
+varying float fShininess;
+
+varying mat4 fTranslation;
+varying mat4 fInvTranslation;
+varying mat4 fRz;
+
+//uniform vec4 ambientProduct,diffuseProduct,specularProduct;
+uniform float theta;
+uniform mat4 projectionMatrix;
+uniform mat4 modelViewMatrix;
+uniform vec4 lightPosition;
+uniform float shininess;
+
+void main()
+{  
+
+
+float s = sin(theta);
+    float c = cos(theta);
+    //c = T-1 R T I (right to left)
+    
+    float dx = vPosition.x + 1.5;
+    float dy = vPosition.y + 1.0;
+    float dz = vPosition.z + 1.0;
+    
+    mat4 identity = mat4(1.0, 0.0, 0.0, 0.0,
+                         0.0, 1.0, 0.0, 0.0,
+                         0.0, 0.0, 1.0, 0.0,
+                         0.0, 0.0, 0.0, 1.0);
+    
+    mat4 rz = mat4( c ,  s  , 0.0, 0.0,
+                   -s ,  c  , 0.0, 0.0,
+                   0.0,  0.0, 1.0, 0.0,
+                   0.0,  0.0, 0.0, 1.0);
+                   
+                   
+    mat4 translation = mat4(1.0, 0.0, 0.0, 0,
+                            0.0, 1.0, 0.0, 0,
+                            0.0, 0.0, 1.0, 0,
+                            vCenter.x, vCenter.y, vCenter.z, 1.0);
+                            
+    mat4 invTranslation = mat4(1.0, 0.0, 0.0, 0,
+                               0.0, 1.0, 0.0, 0,
+                               0.0, 0.0, 1.0, 0,
+                               -vCenter.x, -vCenter.y, -vCenter.z, 1.0);
+                               
+                               
+
+    vec4 rotation = translation * rz * invTranslation * vPosition;
+    vec4 finalPosition = projectionMatrix*modelViewMatrix*rotation;
+    
+    gl_Position = finalPosition;
+
+    
+    vec3 pos = -(modelViewMatrix * vPosition).xyz;
+
+    //send rotation information to fragment shader
+    fRz = rz;
+    fTranslation = translation;
+    fInvTranslation = invTranslation;
+    
+    //fixed light postion
+    
+    vec3 light = lightPosition.xyz;
+    vec3 L = normalize( light - pos );
+    //send value to fragment shader for further use
+    fL = L;
+    
+    vec3 E = normalize( -pos );
+    vec3 H = normalize( L + E );
+    //Send value to fragment shader for further use
+    fH = H;
+    
+   
+    
+    vec4 newNormal = vec4(vNormal,0);
+    vec4 NN = translation * rz * invTranslation * newNormal;
+    vec3 N = normalize( (modelViewMatrix*NN).xyz);
+    //send value to fragment shader for further use
+    fN = N;
+
+
+    //Send ambient, diffuse & specular products to the fragment shader
+    fAmbientProduct = ambientProduct;
+    fDiffuseProduct = diffuseProduct;
+    fSpecularProduct = specularProduct;
+
+    fTexCoord = vTexCoord;
+    fShininess = shininess;
+
+    inputBinormal = vBinormal;
+    inputTangent = vTangent;
+    inputNormal = N;
+    
+    
+    
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+varying vec4 fColor;
+varying vec2 fTexCoord;
+varying vec3 fL;
+varying vec3 fH;
+varying vec3 fN;
+varying vec4 fDiffuseProduct;
+varying vec4 fAmbientProduct;
+varying vec4 fSpecularProduct;
+varying mat4 fRz;
+varying mat4 fTranslation;
+varying mat4 fInvTranslation;
+varying vec3 inputNormal, inputBinormal, inputTangent;
+
+
+
+uniform sampler2D texMap;
+varying float fShininess;
+void
+main()
+{
+    vec4 Nmap = texture2D(texMap,fTexCoord);
+    vec3 fNN = normalize(2.0*Nmap.xyz - 1.0);
+
+    vec3 bumpNormal = (fNN.x * inputTangent) + (fNN.y * inputBinormal) + (fNN.z * inputNormal);
+
+    vec3 fLL = normalize(fL);
+    float fKd = max(dot(bumpNormal,fLL),0.0);
+
+    vec4 ambient = fAmbientProduct;
+    vec4 diffuse = fKd*fDiffuseProduct;
+
+    float fKs = pow( max(dot(bumpNormal, fH), 0.0), fShininess );
+    vec4  specular = fKs * fSpecularProduct;
+
+
+    if( dot(fLL, bumpNormal) < 0.0 ) {
+    specular = vec4(0.0, 0.0, 0.0, 1.0);
+    } 
+
+    vec4 finalColor = ambient + diffuse + specular;
+    finalColor.a = .01;
+    gl_FragColor = finalColor;
+
+}
+</script>
+
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="normalCarpet.js"></script>
+
+</head>   
+
+<body>
+
+    <center>
+    <canvas id="gl-canvas" width="700" height="700">
+        Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    <br>
+    <br>
+    <p id="subdivisions">
+    Subdivisions
+    <input type="range" id="slider"  value="0"
+        min="0" max="3"></p>
+    <button id = "rotate">
+        Rotate
+    </button>
+    <br>
+        <p id="colors">
+        Colors
+        <button id="blendSmooth">Blend Smooth</button>
+        <button id="blendRandom">Blend Random</button>
+        <button id="uniform">S-Uniform</button>
+        <button id="totalUniform">T-Uniform</button>
+        </p>
+        <p id="cameraControls">
+        Camera Controls
+        <button id="left">Left</button>
+        <button id="right">Right</button>
+        <button id="up">Up</button>
+        <button id="down">Down</button>
+        <button id="forward">Forward</button>
+        <button id="back">Back</button>
+        </p>
+        <p id="sliders">
+        Pitch<input id="xSlider" type="range"
+            min="-360" max="360" step=".005" value="0"/>
+        Yaw<input id="ySlider" type="range"
+            min="-360" max="360" step="1" value="0"/>
+            
+        Roll<input id="zSlider" type="range"
+            min="-360" max="360" step=".005" value="0"/>
+            </p>
+        <!--
+        <p id="breakButton">Press then Subdivide then Rotate
+        <button id = "redbutton"></button>
+        </p>-->
+        <canvas id="canvas2" width="1024" height="1024"></canvas>
+        <img id="image" src="cushionNormal.png"></img>
+    </center>
+</body>
+</html>
