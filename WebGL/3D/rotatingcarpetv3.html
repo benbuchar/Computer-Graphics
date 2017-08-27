@@ -39,8 +39,8 @@ void main()
     
     fColor = vColor;
     
-	float s = sin(theta);
-	float c = cos(theta);
+    float s = sin(theta);
+    float c = cos(theta);
     //c = T-1 R T I (right to left)
     
     float dx = vPosition.x + 1.5;
@@ -69,25 +69,6 @@ void main()
                                -vCenter.x, -vCenter.y, 0.0, 1.0);
                                
                                
-    //vec4 newPosition =  translation * rz * invTranslation * vPosition;
-    //vec4 newPosition = invTranslation * rz * translation * vPosition;
-     
-    //gl_Position.x = newPosition.x;
-    //gl_Position.y = newPosition.y;
-     
-    //gl_Position.x = -s*vPosition.y + c * vPosition.x;
-	//gl_Position.y = s*vPosition.x + c * vPosition.y;
-    
-	
-	//gl_Position.z = 0.0;
-	//gl_Position.w = 1.0;
-	
-	//vec4 newPosition = translation * rz * invTranslation * vPosition;
-	//vec4 newPosition2 = projectionMatrix*modelViewMatrix*newPosition;
-	//gl_Position.x = newPosition2.x;
-	//gl_Position.y = newPosition2.y;
-	//gl_Position.z = 0.0;
-	//gl_Position.w = 1.0;
 	gl_Position = projectionMatrix*modelViewMatrix*vPosition;
     
     
